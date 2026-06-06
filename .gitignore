@@ -1,6 +1,9 @@
 # Secrets — never commit
 ig_cookies.json
 
+# Analysis output & ratings — keep local
+analysis_cache.json
+
 # Large media
 *.mp4
 *.wav
