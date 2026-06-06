@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
-Instagram Reel HTML & Video Saver - Direct Playwright Implementation
+Instagram Reel HTML & Video Saver 
+Direct Playwright Implementation
 """
 
 import asyncio
@@ -9,16 +10,16 @@ import json
 from pathlib import Path
 from playwright.async_api import async_playwright
 
-# ========== CONFIG ==========
+# con
 URLS = [
     "https://www.instagram.com/reels/DYrOxsxONyt/",
-    # Add your URLs here
+    # Add URLs here
 ]
 OUTPUT_DIR = Path("ig_pages")
 COOKIE_FILE = "ig_cookies.json"
 DELAY_SECONDS = (8, 18)  # random range
 HEADLESS = False  # MUST be False to avoid detection
-# ============================
+
 
 async def save_login():
     """One-time login to save cookies"""
@@ -45,7 +46,7 @@ async def scrape_reels():
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/124.0.0.0"
         )
         
-        # If you have saved cookies, apply them
+        # apply saved cookies
         if Path(COOKIE_FILE).exists():
             with open(COOKIE_FILE) as f:
                 cookies = json.load(f).get("cookies", [])
