@@ -1,0 +1,12 @@
+# Secrets — never commit
+ig_cookies.json
+
+# Large media
+*.mp4
+*.wav
+*.mp3
+
+# Junk
+__pycache__/
+.DS_Store
+temp_profile/
