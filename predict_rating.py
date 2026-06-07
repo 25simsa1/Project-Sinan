@@ -34,6 +34,11 @@ MIN_RATINGS = 5
 # How many liked/disliked examples to show the model as taste context.
 N_EXAMPLES = 5
 
+# Tell yt-dlp where to get Instagram login cookies.
+# Easiest: pull from a browser you're logged into. Use "safari", "chrome",
+# "firefox", "edge", or "brave". Set to None to disable.
+COOKIES_FROM_BROWSER = "chrome"   # change to whichever browser you're logged into
+COOKIES_FILE = None               # OR set a Netscape cookies.txt path instead
 
 def load_cache():
     if os.path.exists(CACHE_FILE):
