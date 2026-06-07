@@ -46,5 +46,17 @@
     "analyzed_at": 1780786727.28173,
     "source_file": "ig_pages/DZBO0Y0Jcdb.html",
     "user_rating": 1
+  },
+  "DZNUxjhg-Ys": {
+    "analysis": {
+      "summary": "A person holds up a glass of coffee after doing one load of laundry and declares they deserve a little treat.",
+      "transcript": "Music",
+      "on_screen_text": "me after doing one load\nof laundry...\n“I deserve a little treat”",
+      "visuals": "a hand holding a glass of coffee, kitchen counter with appliances in the background",
+      "purpose": "To humorously depict self-care and reward oneself for completing household chores."
+    },
+    "analyzed_at": 1780793127.6157,
+    "source_file": "ig_pages/DZNUxjhg-Ys.html",
+    "backend": "local"
   }
 }
