@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-Instagram reel collector, feed, saved, or hashtag.
+""" Instagram reel collector, feed, saved, or hashtag.
 Saves HTML and optionally downloads videos.
 
 Usage:
@@ -117,7 +116,15 @@ async def collect_feed_urls(page, limit):
 
 
 async def collect_reels_tab_urls(page, limit):
-    """Collect reel URLs from the dedicated Reels tab using auto-scroll."""
+    """Collect reel URLs from the dedicated Reels tab using auto-scroll.
+
+    The Reels tab shows one full-screen reel at a time, so there is usually no
+    static list of <a href="/reel/"> links to scrape. We let an injected
+    auto-scroll script advance through reels, and on each iteration we capture
+    the URL two ways for robustness:
+      1. page.url (Instagram updates the address bar to /reels/<code>/)
+      2. any visible a[href*="/reel/"] anchors in the DOM
+    """
     print("Navigating to Reels tab...")
     await page.goto("https://www.instagram.com/reels/", wait_until="networkidle")
     await asyncio.sleep(2)
@@ -183,64 +190,56 @@ async def collect_reels_tab_urls(page, limit):
     await page.evaluate(auto_scroll_js)
     print("Auto-scroll started.")
 
-    # Collect URLs as they appear
+    # Collect URLs as the auto-scroll advances through reels
     collected_urls = set()
-    seen_urls = set()
     no_change_count = 0
+    max_no_change = 5  # stop after this many idle iterations in a row
 
     # Give the first reel time to load
     await asyncio.sleep(5)
 
-    while len(collected_urls) < limit and no_change_count < 5:
-        current_url = page.url
-        if current_url not in seen_urls:
-            seen_urls.add(current_url)
-            code = shortcode_from_url(current_url)
-            if code:
-                collected_urls.add(current_url)
-                print(f"  Collected {code} ({len(collected_urls)}/{limit})")
+    while len(collected_urls) < limit and no_change_count < max_no_change:
+        before = len(collected_urls)
+
+        # 1. Current address-bar URL
+        code = shortcode_from_url(page.url)
+        if code:
+            collected_urls.add(page.url.split("?")[0])
+
+        # 2. Any reel anchors currently in the DOM
+        try:
+            links = await page.eval_on_selector_all(
+                'a[href*="/reel/"]',
+                "els => els.map(el => el.href)"
+            )
+        except Exception:
+            links = []
+        for link in links:
+            clean = link.split("?")[0]
+            if shortcode_from_url(clean):
+                collected_urls.add(clean)
+            if len(collected_urls) >= limit:
+                break
+
+        if len(collected_urls) > before:
+            new_count = len(collected_urls) - before
+            print(f"  Collected +{new_count} ({len(collected_urls)}/{limit})")
             no_change_count = 0
         else:
             no_change_count += 1
 
-        # Wait for the reel to play and auto-scroll to next
-        await asyncio.sleep(8)  # adjust based on typical reel duration
+        # Wait for the reel to play and auto-scroll to advance
+        await asyncio.sleep(8)
 
     # Stop the auto-scroll
-    await page.evaluate("window.stopReelScroll()")
+    try:
+        await page.evaluate("window.stopReelScroll()")
+    except Exception:
+        pass
+
     print(f"  Found {len(collected_urls)} unique reels.")
+    return list(collected_urls)[:limit]
 
-    
-    while len(urls) < limit and scrolls < max_scrolls:
-        # On the Reels tab, each reel is a link inside a <div> with certain class
-        # More reliable: look for all <a> tags with href containing /reel/
-        links = await page.eval_on_selector_all(
-            'a[href*="/reel/"]',
-            "els => els.map(el => el.href)"
-        )
-        for link in links:
-            clean = link.split("?")[0]
-            urls.add(clean)
-            if len(urls) >= limit:
-                break
-        print(f"  Scroll {scrolls+1}: {len(urls)} reels so far")
-
-        # Scroll down
-        await page.evaluate("window.scrollBy(0, window.innerHeight)")
-        await asyncio.sleep(random.uniform(2, 4))
-
-        new_height = await page.evaluate("document.body.scrollHeight")
-        if new_height == last_height:
-            no_new += 1
-            if no_new >= 3:
-                break
-        else:
-            no_new = 0
-        last_height = new_height
-        scrolls += 1
-
-    print(f"  Found {len(urls)} reels.")
-    return list(urls)[:limit]
 
 async def collect_saved_urls(page, limit):
     await page.goto("https://www.instagram.com/")

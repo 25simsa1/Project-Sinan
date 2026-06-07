@@ -11,8 +11,8 @@ Settup:
     export GEMINI_API_KEY="your_key"
 
 To run:
-    python3 batch_analyze.py            # analyze new reels
-    python3 batch_analyze.py --dry-run  # just report how many would run
+    python3 analyze_reel.py            # analyze new reels
+    python3 analyze_reel.py --dry-run  # just report how many would run
 """
 
 import os
