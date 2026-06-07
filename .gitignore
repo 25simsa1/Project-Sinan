@@ -1,5 +1,7 @@
 # Secrets — never commit
 ig_cookies.json
+ig_cookies.txt
+yt_dlp_cookies_*.txt
 
 # Analysis output & ratings — keep local
 analysis_cache.json
