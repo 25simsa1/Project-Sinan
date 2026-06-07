@@ -57,6 +57,35 @@
     },
     "analyzed_at": 1780793127.6157,
     "source_file": "ig_pages/DZNUxjhg-Ys.html",
-    "backend": "local"
+    "backend": "local",
+    "user_rating": 4
+  },
+  "DZDLZD4sTae": {
+    "analysis": {
+      "summary": "The video demonstrates how to make quick and easy 5-ingredient brownies using simple ingredients like egg, sugar, flour, cocoa powder, and melted butter. The process involves mixing these ingredients together, baking them at 350 degrees Fahrenheit, and then enjoying the delicious result.",
+      "transcript": "I feel like I've been gay keeping these sliding green brownies and I can't keep doing that to my girls. So today I'm gonna follow you show you how to make them. You're gonna wanna make these on your lazy days when you're creating something sweet because they come together so quick. All right, right this down is egg, sugar, flour, cocoa powder, and melted butter. Optionally, you can throw in a few chocolate chips if you have them in your pantry, but you'll bake up 350 and that's literally it. It's so good.",
+      "on_screen_text": "5 Ingredient Brownies",
+      "visuals": "A person mixing ingredients with an electric mixer, sifting dry ingredients into a bowl, spreading the batter into a baking pan, and holding a slice of freshly baked brownie to show its texture and appearance.",
+      "purpose": "The purpose of the reel is to teach viewers how to make quick and easy 5-ingredient brownies using simple ingredients."
+    },
+    "analyzed_at": 1780796218.890177,
+    "source_file": "ig_pages/DZDLZD4sTae.html",
+    "backend": "local",
+    "predicted_rating": 3,
+    "prediction_reasoning": "This new reel seems more practical and straightforward compared to the previous ones, which were either too philosophical or focused on self-care."
+  },
+  "DYw_11Ju5fI": {
+    "analysis": {
+      "summary": "A bird perches on a log filled with seeds and pecks at them while looking around.",
+      "transcript": "The victim can't even die, this is how it works.",
+      "on_screen_text": "Remember that birdwatching goes both ways",
+      "visuals": "bird, log, seeds, grassy area, trees, house in the background",
+      "purpose": "To showcase a bird's interaction with its environment and encourage viewers to engage with nature."
+    },
+    "analyzed_at": 1780796305.430248,
+    "source_file": "ig_pages/DYw_11Ju5fI.html",
+    "backend": "local",
+    "predicted_rating": 3,
+    "prediction_reasoning": "This reel seems to have a similar tone and style to the 4/5 rated reels, which were humorous and engaging, but lacks the specific content or visuals that made those reels stand out."
   }
 }
