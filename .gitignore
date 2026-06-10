@@ -6,6 +6,9 @@ yt_dlp_cookies_*.txt
 # Analysis output & ratings — keep local
 analysis_cache.json
 
+# Saved reel HTML — scraped content, keep local
+ig_pages/
+
 # Large media
 *.mp4
 *.wav
