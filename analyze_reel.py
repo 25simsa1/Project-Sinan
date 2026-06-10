@@ -56,6 +56,7 @@ import subprocess
 from tqdm import tqdm
 
 from cookies import playwright_json_to_netscape
+from shortcodes import is_reel_shortcode
 
 htmlDir = "ig_pages"
 cacheFile = "analysis_cache.json"
@@ -145,18 +146,6 @@ def shortcode_from_html(path, html):
     # ...otherwise fall back to the filename (e.g. DYrOxsxONyt.html)
     base = os.path.splitext(os.path.basename(path))[0]
     return base if re.fullmatch(r'[A-Za-z0-9_-]+', base) else None
-
-
-def is_reel_shortcode(code):
-    # Real Instagram shortcodes are exactly 11 chars of [A-Za-z0-9_-]. This
-    # positive shape check rejects non-reel saved pages like reels.html
-    # (-> "reels") while still excluding obvious placeholders such as an
-    # all-repeated-character string (e.g. "XXXXXXXXXXX").
-    if not code or not re.fullmatch(r'[A-Za-z0-9_-]{11}', code):
-        return False
-    if len(set(code)) == 1:  # all the same character -> placeholder
-        return False
-    return True
 
 
 def embedded_video_url(html):

@@ -24,6 +24,7 @@ from pathlib import Path
 from playwright.async_api import async_playwright, TimeoutError as PlaywrightTimeout
 
 from cookies import netscape_cookie_file
+from shortcodes import is_reel_shortcode
 
 
 # Configuration
@@ -52,6 +53,11 @@ async def save_page_html(page, url, output_Dir):
     code = shortcode_from_url(url)
     if not code:
         code = url.rstrip('/').split('/')[-1]
+    # Single chokepoint: never write a page that isn't a real reel, so junk
+    # like reels.html / XXXXXXXXXXX.html can't enter the pipeline downstream.
+    if not is_reel_shortcode(code):
+        print(f"  Skipping non-reel {url} (code {code!r})")
+        return code, False
     try:
         await page.goto(url, timeout=nav_Timeout, wait_until="networkidle")
         await asyncio.sleep(2)

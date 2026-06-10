@@ -14,6 +14,8 @@ import os
 import sys
 import json
 
+from shortcodes import is_reel_shortcode
+
 CACHE_FILE = "analysis_cache.json"
 
 
@@ -60,7 +62,7 @@ def main():
 
     rate_all = "--all" in sys.argv
     work = {c: e for c, e in cache.items()
-            if rate_all or not e.get("user_rating")}
+            if is_reel_shortcode(c) and (rate_all or not e.get("user_rating"))}
 
     if not work:
         print("Nothing to rate. (Use --all to revisit rated reels.)")
