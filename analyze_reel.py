@@ -57,6 +57,7 @@ from tqdm import tqdm
 
 from cookies import playwright_json_to_netscape
 from shortcodes import is_reel_shortcode
+import store
 
 htmlDir = "ig_pages"
 cacheFile = "analysis_cache.json"
@@ -122,18 +123,11 @@ localPromptTemplate = (
 # Cache helpers
 
 def load_cache():
-    if os.path.exists(cacheFile):
-        try:
-            with open(cacheFile) as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            print("  (cache file unreadable, starting fresh)")
-    return {}
+    return store.load_analysis()
 
 
 def save_cache(cache):
-    with open(cacheFile, "w") as f:
-        json.dump(cache, f, indent=2, ensure_ascii=False)
+    store.save_analysis(cache)
 
 
 # Getting a shortcode + video from a saved HTML file

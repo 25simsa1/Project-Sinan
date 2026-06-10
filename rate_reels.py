@@ -1,8 +1,8 @@
 """Rate analyzed reels to build a (features, rating) dataset.
 
-Reads the analysis cache produced by analyze_reel.py, shows each reel's
-summary, and lets you score it 1-5. Ratings are written back into the same
-cache under "user_rating", so the next analysis run keeps them.
+Reads the analyses produced by analyze_reel.py and lets you score each reel
+1-5. Ratings are written to their own store (ratings.json) — separate from the
+analysis cache, so rating a reel never rewrites the expensive analysis output.
 
 To run:
     python3 rate_reels.py            # rate reels you haven't rated yet
@@ -10,36 +10,19 @@ To run:
     python3 rate_reels.py --stats    # just show how many are rated
 """
 
-import os
 import sys
-import json
+import time
 
+import store
 from shortcodes import is_reel_shortcode
 
-CACHE_FILE = "analysis_cache.json"
 
-
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE) as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            sys.exit("Cache file unreadable — nothing to rate.")
-    sys.exit(f"No {CACHE_FILE} found. Run analyze_reel.py first.")
-
-
-def save_cache(cache):
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=2, ensure_ascii=False)
-
-
-def show_reel(code, entry):
+def show_reel(code, entry, current_rating=None):
     data = entry.get("analysis", {})
     print("\n" + "=" * 60)
     print(f"Reel: {code}")
-    if entry.get("user_rating"):
-        print(f"(current rating: {entry['user_rating']})")
+    if current_rating:
+        print(f"(current rating: {current_rating})")
     print("-" * 60)
     print(f"Summary:      {data.get('summary', '') or '(none)'}")
     if data.get("on_screen_text"):
@@ -52,17 +35,20 @@ def show_reel(code, entry):
 
 
 def main():
-    cache = load_cache()
+    analysis = store.load_analysis()
+    if not analysis:
+        sys.exit(f"No {store.ANALYSIS_FILE} found. Run analyze_reel.py first.")
+    ratings = store.load_ratings()
 
     if "--stats" in sys.argv:
-        rated = sum(1 for e in cache.values() if e.get("user_rating"))
-        print(f"{len(cache)} reel(s) cached, {rated} rated, "
-              f"{len(cache) - rated} unrated.")
+        n = len(analysis)
+        rated = sum(1 for c in analysis if c in ratings)
+        print(f"{n} reel(s) analyzed, {rated} rated, {n - rated} unrated.")
         return
 
     rate_all = "--all" in sys.argv
-    work = {c: e for c, e in cache.items()
-            if is_reel_shortcode(c) and (rate_all or not e.get("user_rating"))}
+    work = {c: e for c, e in analysis.items()
+            if is_reel_shortcode(c) and (rate_all or c not in ratings)}
 
     if not work:
         print("Nothing to rate. (Use --all to revisit rated reels.)")
@@ -71,21 +57,21 @@ def main():
     print(f"{len(work)} reel(s) to rate. Enter 1-5, 's' to skip, 'q' to quit.")
     rated_now = 0
     for code, entry in work.items():
-        show_reel(code, entry)
+        current = ratings.get(code, {}).get("rating")
+        show_reel(code, entry, current)
         choice = input("Rate 1-5 (s=skip, q=quit): ").strip().lower()
         if choice == "q":
             break
         if choice == "s":
             continue
         if choice.isdigit() and 1 <= int(choice) <= 5:
-            entry["user_rating"] = int(choice)
-            save_cache(cache)  # save after each so progress is never lost
+            ratings[code] = {"rating": int(choice), "rated_at": time.time()}
+            store.save_ratings(ratings)  # save after each so nothing is lost
             rated_now += 1
         else:
             print("  not 1-5, skipping.")
 
-    total_rated = sum(1 for e in cache.values() if e.get("user_rating"))
-    print(f"\nRated this run: {rated_now}. Total rated: {total_rated}.")
+    print(f"\nRated this run: {rated_now}. Total rated: {len(ratings)}.")
 
 
 if __name__ == "__main__":

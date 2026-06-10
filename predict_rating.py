@@ -1,10 +1,10 @@
 """Predict how much you'd like a reel, using a LOCAL model via Ollama.
 
-No cloud API, no cost. Reads the analyses + your ratings from
-analysis_cache.json, builds a short "taste profile" from the reels you
-already rated, and asks a local LLM to score each unrated reel 1-5 with a
-one-line reason. Predictions are written back into the cache as
-"predicted_rating" (and "prediction_reasoning").
+No cloud API, no cost. Reads analyses from analysis_cache.json and your scores
+from ratings.json, builds a short "taste profile" from the reels you already
+rated, and asks a local LLM to score each unrated reel 1-5 with a one-line
+reason. Predictions are written to their own store (predictions.json), so they
+can be wiped and regenerated without touching your ratings or analyses.
 
 Setup (one time):
     # install Ollama: https://ollama.com  (brew install ollama)
@@ -19,13 +19,14 @@ To run:
     python3 predict_rating.py --stats
 """
 
-import os
 import sys
+import time
 import json
 import urllib.request
 import urllib.error
 
-CACHE_FILE = "analysis_cache.json"
+import store
+
 OLLAMA_URL = "http://localhost:11434/api/chat"
 DEFAULT_MODEL = "llama3.2"
 
@@ -33,26 +34,6 @@ DEFAULT_MODEL = "llama3.2"
 MIN_RATINGS = 5
 # How many liked/disliked examples to show the model as taste context.
 N_EXAMPLES = 5
-
-# Tell yt-dlp where to get Instagram login cookies.
-# Easiest: pull from a browser you're logged into. Use "safari", "chrome",
-# "firefox", "edge", or "brave". Set to None to disable.
-COOKIES_FROM_BROWSER = "chrome"   # change to whichever browser you're logged into
-COOKIES_FILE = None               # OR set a Netscape cookies.txt path instead
-
-def load_cache():
-    if os.path.exists(CACHE_FILE):
-        try:
-            with open(CACHE_FILE) as f:
-                return json.load(f)
-        except json.JSONDecodeError:
-            sys.exit("Cache file unreadable.")
-    sys.exit(f"No {CACHE_FILE} found. Run analyze_reel.py first.")
-
-
-def save_cache(cache):
-    with open(CACHE_FILE, "w") as f:
-        json.dump(cache, f, indent=2, ensure_ascii=False)
 
 
 def features(entry):
@@ -66,16 +47,16 @@ def features(entry):
     return "\n".join(parts) or "(no analysis text)"
 
 
-def build_examples(cache, exclude=None):
+def build_examples(analysis, ratings, exclude=None):
     """Pick the highest- and lowest-rated reels as contrastive examples."""
-    rated = [(c, e) for c, e in cache.items()
-             if e.get("user_rating") and c != exclude]
-    rated.sort(key=lambda ce: ce[1]["user_rating"])
+    rated = [(c, ratings[c]["rating"]) for c in ratings
+             if c in analysis and c != exclude]
+    rated.sort(key=lambda cr: cr[1])
     disliked = rated[:N_EXAMPLES]
     liked = rated[-N_EXAMPLES:]
     lines = []
-    for code, e in liked + disliked:
-        lines.append(f"[You rated this {e['user_rating']}/5]\n{features(e)}")
+    for code, score in liked + disliked:
+        lines.append(f"[You rated this {score}/5]\n{features(analysis[code])}")
     return "\n\n".join(lines)
 
 
@@ -136,19 +117,21 @@ def arg_value(flag, default=None):
 
 
 def main():
-    cache = load_cache()
+    analysis = store.load_analysis()
+    ratings = store.load_ratings()
+    predictions = store.load_predictions()
     model = arg_value("--model", DEFAULT_MODEL)
 
-    rated = {c: e for c, e in cache.items() if e.get("user_rating")}
+    # Only ratings we actually have analysis text for are usable.
+    rated = {c: r for c, r in ratings.items() if c in analysis}
     if len(rated) < MIN_RATINGS:
         sys.exit(f"Only {len(rated)} rated reel(s); need at least "
                  f"{MIN_RATINGS} before predictions are meaningful. "
                  f"Rate more with rate_reels.py.")
 
     if "--stats" in sys.argv:
-        predicted = sum(1 for e in cache.values() if "predicted_rating" in e)
-        print(f"{len(cache)} cached, {len(rated)} rated, "
-              f"{predicted} have a prediction.")
+        print(f"{len(analysis)} analyzed, {len(rated)} rated, "
+              f"{len(predictions)} have a prediction.")
         return
 
     check_ollama()
@@ -157,14 +140,14 @@ def main():
     # examples to avoid leakage) and report mean absolute error.
     if "--eval" in sys.argv:
         errors = []
-        for code, entry in rated.items():
-            examples = build_examples(cache, exclude=code)
+        for code in rated:
+            examples = build_examples(analysis, ratings, exclude=code)
             try:
-                pred, _ = predict_one(model, examples, features(entry))
+                pred, _ = predict_one(model, examples, features(analysis[code]))
             except Exception as e:  # noqa: BLE001
                 print(f"[{code}] eval failed: {e}")
                 continue
-            actual = entry["user_rating"]
+            actual = rated[code]["rating"]
             errors.append(abs(pred - actual))
             print(f"[{code}] predicted {pred} vs actual {actual}")
         if errors:
@@ -174,8 +157,8 @@ def main():
         return
 
     # Normal mode: predict reels that are unrated and not yet predicted.
-    todo = [(c, e) for c, e in cache.items()
-            if not e.get("user_rating") and "predicted_rating" not in e]
+    todo = [c for c in analysis
+            if c not in ratings and c not in predictions]
     limit = arg_value("--limit")
     if limit and limit.isdigit():
         todo = todo[:int(limit)]
@@ -184,18 +167,22 @@ def main():
         print("Nothing to predict.")
         return
 
-    examples = build_examples(cache)
+    examples = build_examples(analysis, ratings)
     print(f"Predicting {len(todo)} reel(s) with local model '{model}'...")
     done = 0
-    for code, entry in todo:
+    for code in todo:
         try:
-            pred, why = predict_one(model, examples, features(entry))
+            pred, why = predict_one(model, examples, features(analysis[code]))
         except Exception as e:  # noqa: BLE001
             print(f"[{code}] failed: {e}")
             continue
-        entry["predicted_rating"] = pred
-        entry["prediction_reasoning"] = why
-        save_cache(cache)  # save after each so progress is never lost
+        predictions[code] = {
+            "score": pred,
+            "reasoning": why,
+            "model": model,
+            "predicted_at": time.time(),
+        }
+        store.save_predictions(predictions)  # save after each — never lose work
         done += 1
         print(f"[{code}] predicted {pred}/5 — {why}")
 
