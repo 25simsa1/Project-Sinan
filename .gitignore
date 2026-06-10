@@ -3,8 +3,10 @@ ig_cookies.json
 ig_cookies.txt
 yt_dlp_cookies_*.txt
 
-# Analysis output & ratings — keep local
+# Pipeline data stores — personal, keep local
 analysis_cache.json
+ratings.json
+predictions.json
 
 # Saved reel HTML — scraped content, keep local
 ig_pages/
